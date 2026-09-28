@@ -1,87 +1,47 @@
-from fastapi import FastAPI
-from pydantic import BaseModel
-from typing import List
 
-app = FastAPI(title="Restaurant Online Booking API")
+import streamlit as st
+from dotenv import load_dotenv
+import os
+from google import genai
 
+# Load environment variables
+load_dotenv()
 
-# Restaurant details
-class Restaurant(BaseModel):
-    name: str
-    location: str
-    tables: int
+# Get API key
+api_key = os.getenv("GEMINI_API_KEY")
 
+# Create Gemini client
+client = genai.Client(api_key=api_key)
 
-# Booking details
-class Booking(BaseModel):
-    customer_name: str
-    restaurant_name: str
-    date: str
-    time: str
-    guests: int
+# Page configuration
+st.set_page_config(
+    page_title="Gemini AI Chatbot",
+    page_icon="🤖",
+    layout="centered"
+)
 
+# Title
+st.title("🤖 Gemini AI Chatbot")
+st.write("Ask Gemini anything!")
 
-restaurants = [
-    {
-        "name": "Paradise Restaurant",
-        "location": "Hyderabad",
-        "tables": 20
-    },
-    {
-        "name": "Bawarchi",
-        "location": "Hyderabad",
-        "tables": 15
-    }
-]
+# Input box
+prompt = st.text_area(
+    "Enter your prompt:",
+    placeholder="Explain Artificial Intelligence in simple words..."
+)
 
-bookings = []
+# Button
+if st.button("Generate Response"):
+    if prompt:
+        with st.spinner("Gemini is thinking..."):
+            response = client.models.generate_content(
+                model="gemini-2.5-flash",
+                contents=prompt
+            )
 
+        st.success("Response generated!")
+        st.write(response.text)
 
-@app.get("/")
-def home():
-    return {"message": "Restaurant Online Booking API is running"}
+    else:
+        st.warning("Please enter a prompt.")
 
-
-@app.get("/restaurants")
-def get_restaurants():
-    return restaurants
-
-
-@app.post("/restaurants")
-def add_restaurant(restaurant: Restaurant):
-    restaurants.append(restaurant.dict())
-    return {
-        "message": "Restaurant added successfully",
-        "restaurant": restaurant
-    }
-
-
-@app.post("/bookings")
-def create_booking(booking: Booking):
-    bookings.append(booking.dict())
-
-    return {
-        "message": "Table booked successfully",
-        "booking": booking
-    }
-
-
-@app.get("/bookings")
-def get_bookings():
-    return bookings
-
-
-@app.delete("/bookings/{customer_name}")
-def cancel_booking(customer_name: str):
-
-    for booking in bookings:
-        if booking["customer_name"] == customer_name:
-            bookings.remove(booking)
-
-            return {
-                "message": "Booking cancelled successfully"
-            }
-
-    return {
-        "message": "Booking not found"
-    }
